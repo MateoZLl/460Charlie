@@ -91,6 +91,8 @@ def login():
 # ---------------------- QUIZ PAGE -------------------------
 @app.route('/quiz')
 def quiz():
+    if 'user_id' not in session:
+        return redirect(url_for('first'))
     user_coins = session.get('user_coins')
     return render_template('quiz.html', coins=user_coins)
 
@@ -153,6 +155,8 @@ def submit_signup():
 # ---------------------- HOME PAGE -------------------------
 @app.route('/home')
 def home():
+    if 'user_id' not in session:
+        return redirect(url_for('first'))
     # Retrieve the user's name and coin amount from the session
     user_name = session.get('user_name')
     user_coins = session.get('user_coins')  # Get coins from session
@@ -161,12 +165,16 @@ def home():
 # ---------------------- BOOKLOG PAGE -------------------------
 @app.route('/bookLog')
 def bookLog():
+    if 'user_id' not in session:
+        return redirect(url_for('first'))
     user_coins = session.get('user_coins')
     return render_template('booklog.html', coins=user_coins)
 
 # ---------------------- STARTREAD PAGE -------------------------
 @app.route('/startReading')
 def startReading():
+    if 'user_id' not in session:
+        return redirect(url_for('first'))
     pdf_filename = session.get('pdf_filename')
     pdf_original_filename = session.get('pdf_original_filename')
     user_coins = session.get('user_coins')
@@ -181,6 +189,8 @@ def startReading():
 # ---------------------- READER PAGE -------------------------
 @app.route('/pageReader', methods=['POST', 'GET'])
 def pageReader():
+    if 'user_id' not in session:
+        return redirect(url_for('first'))
     if request.method == 'POST':
         # Handle the POST request to set reading time
         data = request.get_json()
@@ -282,18 +292,29 @@ def update_coins():
         data = request.json  # Get the JSON data from the frontend
         coins_earned = data.get('coins_earned', 0)
 
-        # Update the coins in the session or database
-        if 'user_coins' in session:
-            session['user_coins'] += coins_earned
-        else:
-            session['user_coins'] = coins_earned
+        # Update coins for the logged-in user
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'status': 'error', 'message': 'User not logged in'}), 401
+
+        # Fetch the user from the database
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'status': 'error', 'message': 'User not found'}), 404
+
+        # Increment coins in the database
+        user.coins += coins_earned
+        db.session.commit()
+
+        # Update the session
+        session['user_coins'] = user.coins
 
         return jsonify({
             'status': 'success',
-            'new_total': session['user_coins']
-        })
+            'new_total': user.coins
+        }), 200
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # ---------------------- FILE SERVING -------------------------
 @app.route('/backend/uploads/<path:filename>')

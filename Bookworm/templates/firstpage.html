@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<head>
+    <title>Home Page</title>
+    <style>
+        body{background: #FFF;width: 1440px;
+            height: 1024px;
+            margin:0 auto;
+            }
+
+        .black-text{color: var(--Black, #252E2C);font-family: "General Sans";font-size: 30px;font-style: normal;font-weight: 600;line-height: normal;}
+
+        .green-text{color: var(--Bold-Mint, #47837A);
+                    font-family: "General Sans";
+                    font-size: 30px;
+                    font-style: normal;
+                    font-weight: 600;
+                    line-height: normal;}
+         #mainContent {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+           
+            align-items: center;
+            padding: 20px;
+           
+        }
+
+        #slogan{width: 493px;color: var(--Black, #252E2C);
+                font-family: "General Sans";
+                font-size: 35px;
+                font-style: normal;
+                font-weight: 600;
+                line-height: normal;
+                }
+
+        .signup-btn{display: flex;
+                    width: 200px;
+                    height: 50px;
+                    padding: 5px 25px;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 10px;
+                    flex-shrink: 0;border-radius: 26px;
+                    border: 2px solid var(--Bold-Mint, #47837A);
+                    background: var(--Bold-Mint, #47837A);
+                    box-shadow: 3px 5px 4px 0px #47837A;
+                    
+                    margin-bottom:20px;
+                    
+                    color:#FFF;
+                    font-family: "General Sans";}
+        
+        .login-btn{display: flex;
+                    width: 200px;
+                    height: 50px;
+                    padding: 5px 25px;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 10px;
+                    flex-shrink: 0;border-radius: 26px;
+                    border: 2px solid var(--Bold-Mint, #47837A);
+                    box-shadow: 3px 4px 6px 0px #6D7170;
+                    color:#47837A;
+                    font-family: "General Sans";
+                    }
+        .header {
+                    margin: 25px;
+                }
+                        
+        .mascot{width: 350px;
+height: 400px; float: right;
+margin-top: -150px;
+margin-right: 300px;
+}
+   
+  
+    </style>
+</head>
+
+<body>
+    
+    <div class="header">
+        <span class="black-text">Book</span><span class="green-text">worm</span>
+    </div>
+    
+    <div id="mainContent">
+        <div id="slogan">
+            <p>Make reading simple,  and learning endless!</p>
+        </div>
+
+       
+        <div class="signup-btn" onclick="window.location.href='/signup'">Sign Up</div>
+
+        <div class="login-btn" onclick="window.location.href='/login'">Login</div>
+    </div>
+    
+</body>

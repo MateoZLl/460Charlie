@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/startread_styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/body_styles.css') }}">
+  <title>Start Reading</title>
+</head>
+<body>
+  <div>
+    <nav class="navbar">
+      <div class="navbar-left">
+        <a class="navbar-brand" href="{{ url_for('home') }}">Book<span class="brand-color-shift">worm</span></a>
+        <a href="{{ url_for('bookLog') }}" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1.4em" height="1.4em" viewBox="1 -5.5 24 24">
+            <path fill="#47837A" d="M5 21q-.825 0-1.412-.587T3 19V6.525q0-.35.113-.675t.337-.6L4.7 3.725q.275-.35.687-.538T6.25 3h11.5q.45 0 .863.188t.687.537l1.25 1.525q.225.275.338.6t.112.675V19q0 .825-.587 1.413T19 21zm.4-15h13.2l-.85-1H6.25zM16 8H8v8l4-2l4 2z"/>
+          </svg>
+          Book Log
+        </a>
+      </div>
+      <div class="navbar-right">
+        <span class="coins">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1.4em" height="1.4em" viewBox="3 -6 24 24">
+            <path fill="#FFCC4D" d="M17 3.34A10 10 0 1 1 2 12l.005-.324A10 10 0 0 1 17 3.34M12 6a1 1 0 0 0-1 1a3 3 0 1 0 0 6v2a1.02 1.02 0 0 1-.866-.398l-.068-.101a1 1 0 0 0-1.732.998a3 3 0 0 0 2.505 1.5H11a1 1 0 0 0 .883.994L12 18a1 1 0 0 0 1-1l.176-.005A3 3 0 0 0 13 11V9c.358-.012.671.14.866.398l.068.101a1 1 0 0 0 1.732-.998A3 3 0 0 0 13.161 7H13a1 1 0 0 0-1-1m1 7a1 1 0 0 1 0 2zm-2-4v2a1 1 0 0 1 0-2"/>
+          </svg>
+          {{ coins }}
+        </span>
+        <button class="home-btn" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+  </div>
+  <div class="container">
+    <div class="new-reading">
+      <div class="left-side">
+        <h4>Book selected</h4>
+        <div class="pdf-thumbnail-holder" id="pdf-thumbnail-holder">
+          <canvas id="pdf-canvas"></canvas>
+        </div>
+        <p id="book-name">{{ pdf_original_filename }}</p>
+        <a href="{{ url_for('bookLog') }}">
+          <button class="home-btn" id="select-book-btn">Select different book</button>
+        </a>
+      </div>
+      <div class="right-side">
+        <h4>Set reading length</h4>
+        <div class="timer-container">
+          <div id="timer-timeDisplay" class="timer-timeDisplay">
+            <p id="time-display"><span id="time-in-mins">120</span> min</p>
+          </div>
+          <div id="timer-progressContainer" class="timer-progressContainer" 
+               onclick="handleClick(event)" 
+               onmousedown="handleMouseDown()" 
+               onmousemove="handleMouseMove(event)" 
+               onmouseup="handleMouseUp()" 
+               onmouseleave="handleMouseUp()">
+            <div id="progress-bar" class="timer-progressBar"></div>
+          </div>
+        </div>
+        <a>
+          <button class="home-btn" id="start-reading-btn">Start reading</button>
+        </a>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/build/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/build/pdf.worker.min.js';
+    
+    // Get the PDF link and book name from session
+    const pdfUrl = "{{ pdf_filename }}";
+    
+    // Load the PDF file and display the first page
+    pdfjsLib.getDocument(pdfUrl).promise.then(pdfDoc => {
+      pdfDoc.getPage(1).then(page => {
+        const canvas = document.getElementById('pdf-canvas');
+        const context = canvas.getContext('2d');
+        const scale = 220 / page.getViewport({ scale: 1 }).width;
+        const viewport = page.getViewport({scale: scale});
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        page.render({ canvasContext: context, viewport: viewport });
+      });
+    }).catch(error => {
+      console.error("Error loading PDF:", error);
+    });
+
+    let time = 120;
+    let isDragging = false;
+
+    const calculateTimeFromPosition = (event, container) => {
+        const rect = container.getBoundingClientRect();
+        const offsetX = event.clientX - rect.left;
+        const width = rect.width;
+        return Math.min(120, Math.max(0, (offsetX / width) * 120) + 5);
+    };
+
+    const handleClick = (event) => {
+        const progressContainer = event.currentTarget;
+        const newTime = calculateTimeFromPosition(event, progressContainer);
+        time = Math.round(newTime);
+        updateTimeDisplay();
+    };
+
+    const handleMouseDown = () => {
+        isDragging = true;
+    };
+
+    const handleMouseMove = (event) => {
+        if (isDragging) {
+            const progressContainer = event.currentTarget;
+            const newTime = calculateTimeFromPosition(event, progressContainer);
+            time = Math.round(newTime);
+            updateTimeDisplay();
+        }
+    };
+
+    const handleMouseUp = () => {
+        isDragging = false;
+    };
+
+    const updateTimeDisplay = () => {
+        const timInMins = document.getElementById("time-in-mins");
+        const progressBar = document.getElementById("progress-bar");
+
+        timInMins.innerHTML = `${time}`;
+        console.log(time)
+
+        progressBar.style.width = `${(time / 120) * 100}%`;
+    };
+
+    updateTimeDisplay();
+    
+    function logout() {
+        window.location.href = "/logout";  // Redirect to logout route
+    }
+
+    document.getElementById('start-reading-btn').addEventListener('click', () => {
+        fetch('/pageReader', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ time }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                console.log("Time sent to server:", time);
+                setTimeout(() => {
+                    window.location.href = '/pageReader';
+                }, 200); // Optional delay
+            } else {
+                console.error("Error:", data.error);
+            }
+        })
+        .catch(error => {
+            console.error("Error sending time to server:", error);
+        });
+    });
+  </script>
+</body>
+</html>

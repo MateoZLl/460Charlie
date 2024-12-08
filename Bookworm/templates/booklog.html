@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/booklog_styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/body_styles.css') }}">
+  <title>Booklog</title>
+</head>
+<body>
+  <div>
+    <nav class="navbar">
+      <div class="navbar-left">
+        <a class="navbar-brand" href="{{ url_for('home') }}">Book<span class="brand-color-shift">worm</span></a>
+        <a href="{{ url_for('startReading') }}" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1.3em" height="1.3em" viewBox="0 -5.5 24 24">
+              <path fill="#47837A" d="M6.75 22q-1.125 0-1.937-.763T4 19.35V5.4q0-.95.588-1.7t1.537-.95l7.5-1.475q.925-.2 1.65.4T16 3.225V15.15q0 .725-.45 1.288t-1.15.687L6.525 18.7q-.225.05-.375.238T6 19.35q0 .275.225.463T6.75 20H18V5q0-.425.288-.712T19 4t.713.288T20 5v15q0 .825-.587 1.413T18 22zm1.45-5.65q.35-.075.575-.35T9 15.375V5.45q0-.475-.363-.775t-.837-.2q-.35.075-.575.35T7 5.45v9.925q0 .475.362.775t.838.2"/>
+          </svg>
+          Start Reading
+      </a>
+      </div>
+      <div class="navbar-right">
+        <span class="coins">
+            <svg xmlns="http://www.w3.org/2000/svg" width="1.4em" height="1.4em" viewBox="3 -6 24 24">
+                <path fill="#FFCC4D" d="M17 3.34A10 10 0 1 1 2 12l.005-.324A10 10 0 0 1 17 3.34M12 6a1 1 0 0 0-1 1a3 3 0 1 0 0 6v2a1.02 1.02 0 0 1-.866-.398l-.068-.101a1 1 0 0 0-1.732.998a3 3 0 0 0 2.505 1.5H11a1 1 0 0 0 .883.994L12 18a1 1 0 0 0 1-1l.176-.005A3 3 0 0 0 13 11V9c.358-.012.671.14.866.398l.068.101a1 1 0 0 0 1.732-.998A3 3 0 0 0 13.161 7H13a1 1 0 0 0-1-1m1 7a1 1 0 0 1 0 2zm-2-4v2a1 1 0 0 1 0-2"/>
+            </svg>
+            {{ coins }}
+        </span>
+        <a href="{{ url_for('logout') }}" class="home-btn">Logout</a>
+    </div>
+    </nav>
+    <div class="container">
+        <div class="form-div">
+          <h3>Search</h3>
+          <form id="searchForm">
+            <input
+              type="text"
+              id="searchBar"
+              name="searchBar"
+              placeholder="Search by book name..."
+              oninput="filterBooks()"
+            />
+          </form>
+        </div>
+        <div id="display-container" class="display-container"></div>
+      </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/build/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/build/pdf.worker.min.js';
+  </script>
+
+  <script>
+    const displayContainer = document.getElementById("display-container");
+    let books = [];  // Initialize as an empty array. We will populate this with user-uploaded files.
+
+    function fetchUploadedBooks() {
+        fetch('/api/get-uploads')
+            .then(response => response.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    books = data;  // Update books array
+                    renderBooks(books);  // Render the updated books list
+                } else {
+                    console.error("Error fetching files:", data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching uploaded files:", error);
+            });
+    }
+
+    function filterBooks() {
+        const query = document.getElementById("searchBar").value.toLowerCase();
+        const filteredBooks = books.filter(book => 
+            book.bookname.toLowerCase().includes(query)
+        );
+        renderBooks(filteredBooks);
+    }
+
+    function renderBooks(bookList) {
+        displayContainer.innerHTML = "";  // Clear the display container
+
+        bookList.forEach((book) => {
+            const bookCard = document.createElement("div");
+            bookCard.className = "book-card";
+
+            const thumbnailHolder = document.createElement("div");
+            thumbnailHolder.className = "pdf-thumbnail-holder";
+
+            const canvas = document.createElement("canvas");
+
+            const pdfPath = book.pdf;
+            const loadingTask = pdfjsLib.getDocument(pdfPath);
+
+            loadingTask.promise
+                .then((pdf) => pdf.getPage(1))  // Load the first page of the PDF
+                .then((page) => {
+                    const context = canvas.getContext("2d");
+
+                    const scale = 140 / page.getViewport({ scale: 1 }).width;  // Adjust scale for thumbnail
+                    const viewport = page.getViewport({ scale: scale });
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+
+                    const renderContext = { 
+                        canvasContext: context, 
+                        viewport: viewport 
+                    };
+                    return page.render(renderContext).promise;
+                })
+                .catch((error) => {
+                    console.error("Error loading PDF: ", error);
+                    canvas.style.display = "none";
+                    const placeholder = document.createElement("div");
+                    placeholder.className = "pdf-placeholder";
+                    placeholder.textContent = "Thumbnail not available";
+                    thumbnailHolder.appendChild(placeholder);
+                });
+
+            thumbnailHolder.appendChild(canvas);
+
+            const bookName = document.createElement("p");
+            bookName.textContent = book.bookname;
+
+            const link = document.createElement("a");
+            link.href = "#";  // We'll change this to redirect to the startReading page later
+
+            const button = document.createElement("button");
+            button.className = "home-btn";
+            button.textContent = "Read";
+            link.appendChild(button);
+
+            link.addEventListener("click", (event) => {
+                event.preventDefault();  // Prevent the default link behavior
+
+                // Send the PDF info to the server to store in the session
+                fetch('/set-pdf-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        filename: book.pdf, 
+                        original_filename: book.bookname,
+                    })
+                }).then(response => response.json())
+                  .then(data => {
+                      // Redirect to the startReading page
+                      window.location.href = '/startReading';
+                  })
+                  .catch(error => {
+                      console.error("Error setting session data:", error);
+                  });
+            });
+
+            bookCard.appendChild(thumbnailHolder);
+            bookCard.appendChild(bookName);
+            bookCard.appendChild(link);
+
+            displayContainer.appendChild(bookCard);
+        });
+    }
+
+    const searchForm = document.getElementById("searchForm");
+    searchForm.addEventListener("submit", function(event) {
+        event.preventDefault();
+    });
+
+    // Call fetchUploadedBooks to load the user's uploaded PDFs when the page loads
+    document.addEventListener("DOMContentLoaded", fetchUploadedBooks);
+  </script>
+</body>
+</html>
